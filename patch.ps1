@@ -283,8 +283,10 @@ if ($iisReady) {
     exit 0
 }
 
-Write-Host "Copying IIS rewrite module from IIS Express to IIS..."
+Write-Host "Copying IIS URL Rewrite module from IIS Express to IIS..."
+&iisreset /stop
 Install-IISRewriteModule
 Install-IISRewriteSchema
 Add-URLRewriteConfiguration
-Write-Host "Installation complete."
+&iisreset /start
+Write-Host "IIS URL Rewrite module installed successfully."

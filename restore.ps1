@@ -118,6 +118,10 @@ function Remove-URLRewriteConfiguration {
 }
 
 # Run the Remove Process
+Write-Host "Removing IIS URL Rewrite module..."
+&iisreset /stop
 Remove-IISRewriteModule
 Remove-IISRewriteSchema
 Remove-URLRewriteConfiguration
+&iisreset /start
+Write-Host "IIS URL Rewrite module removed successfully."
