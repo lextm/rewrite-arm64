@@ -18,7 +18,6 @@ Running web apps in pure ARM64 bitness offers several benefits:
 - **Performance Boost**: Pure ARM64 apps avoid x64 emulation overhead, leading to better performance and lower power consumption, especially on ARM-based devices like the Copilot PCs.
 - **Consistent End-to-End Testing**: Ensures consistent testing for developers targeting ARM64 client devices, allowing early detection of architecture-specific issues.
 - **Future-Proofing**: As ARM64 adoption grows, developers can future-proof their applications by preparing for native ARM64 deployment.
-- **Cross-Platform Development**: Offers parity with ARM64 environments on macOS (M1/M2) and Linux, simplifying cross-platform development.
 
 ## Preparation
 
