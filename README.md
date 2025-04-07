@@ -33,11 +33,31 @@ Perform the following steps to prepare the environment on your development machi
 ## Apply the Patch
 
 1. Clone this repo to your local disk.
-1. Execute `patch.ps1` as administrator so that it extracts the necessary files from IIS Express and install to the desired places.
+2. Run PowerShell as administrator.
+3. Navigate to the repository directory.
+4. Execute `patch.ps1` script to replace the IIS URL Rewrite module with the ARM64 version from IIS Express.
+
+The script will:
+- Verify that URL Rewrite module is installed
+- Check if IIS Express has the ARM64-compatible version of rewrite.dll
+- Backup your existing rewrite.dll to rewrite.dll.bak
+- Replace the x64 version with the ARM64 version
+- Restart IIS to apply changes
+
+If you see any errors during the process, check that you've met all the prerequisites.
 
 ## Restore to Default
 
-1. Execute `restore.ps1` as administrator.
+If you need to revert to the original x64 version:
+
+1. Run PowerShell as administrator.
+2. Navigate to the repository directory.
+3. Execute the restore script.
+
+The script will:
+- Stop IIS
+- Restore your original rewrite.dll from the backup
+- Restart IIS
 
 ## Technical Support
 

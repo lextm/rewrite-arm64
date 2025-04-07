@@ -2,126 +2,76 @@
 
 <#
 .SYNOPSIS
-Removes the copied IIS rewrite module DLLs.
+Restores the original IIS URL Rewrite module from backup.
 
 .DESCRIPTION
-This script deletes the `rewrite.dll` files from the IIS installation folders,
-reverting the changes made by the patch script.
+This script restores the original IIS URL Rewrite module DLL from the backup 
+created during the patching process.
 
 .NOTES
 Requires administrative privileges.
 #>
 
-# IIS File Paths
-$IIS32Path = Join-Path "$env:windir\SysWOW64\inetsrv" "rewrite.dll"
+# File Paths
 $IIS64Path = Join-Path "$env:windir\System32\inetsrv" "rewrite.dll"
-$IISSchemaPath = Join-Path "$env:windir\System32\inetsrv\config\schema" "rewrite_schema.xml"
-$ApplicationHostConfigPath = Join-Path "$env:windir\System32\inetsrv\config" "applicationHost.config"
+$BackupPath = Join-Path "$env:windir\System32\inetsrv" "rewrite.dll.bak"
 
-function Remove-IISRewriteModule {
+function Restore-IISRewriteModule {
     <#
     .SYNOPSIS
-    Deletes the copied IIS rewrite module files.
+    Restores the original 64-bit rewrite.dll from backup.
     #>
-
     try {
-        # Delete 32-bit DLL
-        if (Test-Path $IIS32Path) {
-            Remove-Item -Path $IIS32Path -Force
-            Write-Host "Deleted 32-bit rewrite.dll from: $IIS32Path"
+        if (Test-Path $BackupPath) {
+            Copy-Item -Path $BackupPath -Destination $IIS64Path -Force
+            Write-Host "Restored original 64-bit rewrite.dll from backup"
+            return $true
         } else {
-            Write-Warning "32-bit rewrite.dll not found: $IIS32Path"
-        }
-
-        # Delete 64-bit DLL
-        if (Test-Path $IIS64Path) {
-            Remove-Item -Path $IIS64Path -Force
-            Write-Host "Deleted 64-bit rewrite.dll from: $IIS64Path"
-        } else {
-            Write-Warning "64-bit rewrite.dll not found: $IIS64Path"
-        }
-
-        Write-Host "IIS rewrite.dll files removed successfully."
-    }
-    catch {
-        Write-Error "Failed to delete rewrite.dll files: $_"
-    }
-}
-
-function Remove-IISRewriteSchema {
-    try {
-        if (Test-Path $IISSchemaPath) {
-            Remove-Item -Path $IISSchemaPath -Force
-            Write-Host "Deleted rewrite_schema.xml from IIS schema folder: $IISSchemaPath"
-        } else {
-            Write-Warning "rewrite_schema.xml not found in IIS schema folder: $IISSchemaPath"
+            Write-Host "Cannot restore, backup file doesn't exist: $BackupPath"
+            return $false
         }
     }
     catch {
-        Write-Error "Failed to delete rewrite_schema.xml: $_"
+        Write-Error "Failed to restore rewrite.dll from backup: $_"
+        return $false
     }
 }
 
-function Remove-URLRewriteConfiguration {
-    if (-not (Test-Path $ApplicationHostConfigPath)) {
-        Write-Error "applicationHost.config not found at $ApplicationHostConfigPath"
-        return
-    }
+# Main script execution
 
-    try {
-        [xml]$config = Get-Content $ApplicationHostConfigPath
+Write-Host "Preparing to restore original IIS URL Rewrite module from backup..."
 
-        # Remove rewrite section group from <configSections>
-        $configSections = $config.configuration.'configSections'
-        $systemWebServerGroup = $configSections.SelectSingleNode("sectionGroup[@name='system.webServer']")
-        if ($systemWebServerGroup) {
-            $rewriteGroup = $systemWebServerGroup.SelectSingleNode("sectionGroup[@name='rewrite']")
-            if ($rewriteGroup) {
-                $systemWebServerGroup.RemoveChild($rewriteGroup) | Out-Null
-                Write-Host "Removed rewrite sectionGroup from system.webServer in configSections."
-            } else {
-                Write-Host "rewrite sectionGroup not found under system.webServer in configSections."
-            }
-        } else {
-            Write-Host "system.webServer group not found in configSections."
-        }
-
-        # Remove global module for RewriteModule
-        $globalModule = $config.configuration.'system.webServer'.globalModules.SelectSingleNode("add[@name='RewriteModule']")
-        if ($globalModule) {
-            $globalModule.ParentNode.RemoveChild($globalModule) | Out-Null
-            Write-Host "Removed RewriteModule from globalModules."
-        } else {
-            Write-Host "RewriteModule not found in globalModules."
-        }
-
-        # Remove RewriteModule from <modules>
-        $modules = $config.configuration.'system.webServer'.modules
-        if ($modules) {
-            $module = $modules.SelectSingleNode("add[@name='RewriteModule']")
-            if ($module) {
-                $modules.RemoveChild($module) | Out-Null
-                Write-Host "Removed RewriteModule from modules."
-            } else {
-                Write-Host "RewriteModule not found in modules."
-            }
-        } else {
-            Write-Host "<modules> not found."
-        }
-
-        # Save the updated configuration
-        $config.Save($ApplicationHostConfigPath)
-    }
-    catch {
-        Write-Error "Failed to remove URL Rewrite configuration: $_"
-    }
+if (-not (Test-Path $BackupPath)) {
+    Write-Host "No backup file found at $BackupPath. Cannot restore from backup."
+    Write-Host "Please reinstall the URL Rewrite module manually:"
+    Write-Host "1. Download the official URL Rewrite module installer from Microsoft:"
+    Write-Host "   https://www.iis.net/downloads/microsoft/url-rewrite"
+    Write-Host "2. Uninstall any existing URL Rewrite module from Control Panel"
+    Write-Host "3. Run the downloaded installer to reinstall the module"
+    exit 1
 }
 
-# Run the Remove Process
-Write-Host "Removing IIS URL Rewrite module..."
 &iisreset /stop
-Remove-IISRewriteModule
-Remove-IISRewriteSchema
-Remove-URLRewriteConfiguration
+$restoreSuccess = Restore-IISRewriteModule
 &iisreset /start
-Write-Host "IIS URL Rewrite module removed successfully."
+if ($restoreSuccess) {
+    Write-Host "Successfully restored original IIS URL Rewrite module."
+    # Delete the backup file after successful restoration
+    try {
+        Remove-Item -Path $BackupPath -Force
+        Write-Host "Backup file deleted successfully."
+    }
+    catch {
+        Write-Warning "Could not delete backup file: $_"
+    }
+} else {
+    Write-Host "Failed to restore IIS URL Rewrite module."
+    Write-Host "Please reinstall the URL Rewrite module manually:"
+    Write-Host "1. Download the official URL Rewrite module installer from Microsoft:"
+    Write-Host "   https://www.iis.net/downloads/microsoft/url-rewrite"
+    Write-Host "2. Uninstall any existing URL Rewrite module from Control Panel"
+    Write-Host "3. Run the downloaded installer to reinstall the module"
+    exit 1
+}
+
+Write-Host "IIS URL Rewrite module restored successfully."
